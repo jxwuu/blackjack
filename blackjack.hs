@@ -19,8 +19,7 @@ import System.Random
 
 -- ***the following data types are adapted from Dr. David Poole's "MagicSum.hs" example:
 
--- state consists of internal state and possible actions each player can take
--- (list for player's possible actions, list for CPU's possible actions)
+-- state consists of internal state and whether a player can Hit again or not
 data State = State InternalState Bool Bool
          deriving (Ord, Eq, Show)
 
@@ -33,7 +32,7 @@ internal state consists of a 4-tuple with values:
 -}
 type InternalState = ([Card], [Card], [Card], Bool)
 
--- (suit, value (1 - 10, J, Q, or K))
+-- (suit, value (1 - 13, where ace = 1, jack = 11, queen = 12, king = 13)
 type Card = (Char, Int)
 
 type Player = State -> Action
@@ -47,10 +46,10 @@ data Result = EndOfGame Bool State
 
 {-
 Actions:
-		- Hit = take another card
+		- Hit n = take another card (of index n, to be used by an external RNG)
 		- Stand = take no more cards for the round
 -}
-data Action = Hit Int -- to allow for 'blackjack' to still be a pure function and not use randomRIO
+data Action = Hit Int
 			| Stand
          deriving (Ord, Eq, Show)
 
@@ -73,7 +72,7 @@ blackjack (Hit n) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
 		where
 			(newCard,newDeck) = drawFromDeck deck n
 
--- action = stand
+-- action = stand (sets player's boolean flag (pCanHit/cCanHit) to False)
 blackjack (Stand) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
 	| currPlayer = ContinueGame (State (pCards, cCards, deck, currPlayer) False cCanHit)
 	| otherwise = ContinueGame (State (pCards, cCards, deck, currPlayer) pCanHit False)
