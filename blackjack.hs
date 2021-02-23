@@ -21,7 +21,7 @@ import System.Random
 
 -- state consists of internal state and possible actions each player can take
 -- (list for player's possible actions, list for CPU's possible actions)
-data State = State InternalState [Action] [Action]
+data State = State InternalState Bool Bool
          deriving (Ord, Eq, Show)
 
 {-
@@ -34,7 +34,7 @@ internal state consists of a 4-tuple with values:
 type InternalState = ([Card], [Card], [Card], Bool)
 
 -- (suit, value (1 - 10, J, Q, or K))
-type Card = (Char, Integer)
+type Card = (Char, Int)
 
 type Player = State -> Action
 
@@ -50,7 +50,7 @@ Actions:
 		- Hit = take another card
 		- Stand = take no more cards for the round
 -}
-data Action = Hit
+data Action = Hit Int -- to allow for 'blackjack' to still be a pure function and not use randomRIO
 			| Stand
          deriving (Ord, Eq, Show)
 
@@ -60,59 +60,56 @@ data Action = Hit
 
 blackjack :: Game
 -- if no available actions for either player, do nothing and continue the game
-blackjack act (State (pCards, cCards, deck, currPlayer) [] cAvailAct) =
-	ContinueGame (State (pCards, cCards, deck, not currPlayer) [] cAvailAct)
-blackjack act (State (pCards, cCards, deck, currPlayer) pAvailAct []) =
-	ContinueGame (State (pCards, cCards, deck, not currPlayer) pAvailAct [])
+blackjack act (State (pCards, cCards, deck, currPlayer) False True) =
+	ContinueGame (State (pCards, cCards, deck, not currPlayer) False True)
+blackjack act (State (pCards, cCards, deck, currPlayer) True False) =
+	ContinueGame (State (pCards, cCards, deck, not currPlayer) True False)
 
 -- action = hit (needs to use checkSum to check the sum of a player's card values after a card was drawn,
---				 and drawFromDeck to randomly draw a card from the deck)
---blackjack (Hit) (State (pState, cState, deck, currPlayer) pAvailAct cAvailAct) =
---	ContinueGame (drawFromDeck (State (pState, cState, deck, currPlayer) pAvailAct cAvailAct))
+--				 and drawFromDeck to draw a card from the deck)
+blackjack (Hit n) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
+	| currPlayer = checkSum (State (newCard:pCards, cCards, newDeck, not currPlayer) pCanHit cCanHit)
+	| otherwise = checkSum (State (pCards, newCard:cCards, newDeck, not currPlayer) pCanHit cCanHit)
+		where
+			(newCard,newDeck) = drawFromDeck deck n
 
 -- action = stand
-blackjack (Stand) (State (pCards, cCards, deck, currPlayer) pAvailAct cAvailAct)
-	| currPlayer = ContinueGame (State (pCards, cCards, deck, currPlayer) [] cAvailAct)
-	| otherwise = ContinueGame (State (pCards, cCards, deck, currPlayer) pAvailAct [])
+blackjack (Stand) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
+	| currPlayer = ContinueGame (State (pCards, cCards, deck, currPlayer) False cCanHit)
+	| otherwise = ContinueGame (State (pCards, cCards, deck, currPlayer) pCanHit False)
+
 
 
 {-----------HELPER FUNCTIONS-----------}
 
--- drawFromDeck :: State -> State
--- drawFromDeck (State (pCards, cCards, deck, currPlayer) pAvailAct cAvailAct)
---NEED TO DEFINE (cards need to be randomly drawn somehow)
+-- returns card drawn and new deck of cards (nth card is drawn from deck)
+drawFromDeck :: [Card] -> Int -> (Card, [Card])
+drawFromDeck deck n = (deck !! n, [card | card <- deck, card /= (deck !! n)])
 
 -- adds up values of a list of cards
-sumCards :: [Card] -> Integer
+sumCards :: [Card] -> Int
 sumCards [] = 0
 sumCards ((_,val):tCard) = val + (sumCards tCard)
 
 -- checks whether a player has exceeded 21
 checkSum :: State -> Result
-checkSum (State (pCards, cCards, deck, currPlayer) pAvailAct cAvailAct)
+checkSum (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
 	| sumCards pCards > 21 = EndOfGame False newGame
 	| sumCards cCards > 21 = EndOfGame True newGame
-	| otherwise = ContinueGame (State (pCards, cCards, deck, currPlayer) pAvailAct cAvailAct)
+	| otherwise = ContinueGame (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
 
 
 
 {-----------CONSTANTS/STARTING STATES-----------}
 
--- whole 52 card deck enumerated
+-- whole 52 card deck
 --	's' == spades
 --	'd' == diamonds
 --	'h' == hearts
 --	'c' == clubs
 fullDeck :: [Card]
-fullDeck = [('s',1), ('s',2), ('s',3), ('s',4), ('s',5), ('s',6), ('s',7),
-	('s',8), ('s',9), ('s',10), ('s',11), ('s',12), ('s',13), --spades
-	('d',1), ('d',2), ('d',3), ('d',4), ('d',5), ('d',6), ('d',7),
-	('d',8), ('d',9), ('d',10), ('d',11), ('d',12), ('d',13), --diamonds
-	('h',1), ('h',2), ('h',3), ('h',4), ('h',5), ('h',6), ('h',7),
-	('h',8), ('h',9), ('h',10), ('h',11), ('h',12), ('h',13), --hearts
-	('c',1), ('c',2), ('c',3), ('c',4), ('c',5), ('c',6), ('c',7),
-	('c',8), ('c',9), ('c',10), ('c',11), ('c',12), ('c',13)] --clubs
+fullDeck = [(suit,value) | suit <- ['s','d','h','c'], value <- [1..13]]
 
 -- start of new blackjack game
 newGame :: State
-newGame = State ([], [], fullDeck, True) [Hit, Stand] [Hit, Stand]
+newGame = State ([], [], fullDeck, True) True True
