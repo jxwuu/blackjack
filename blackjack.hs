@@ -13,7 +13,7 @@ Very simple implentation of Blackjack/Twenty-One:
 
 
 {-----------IMPORTS-----------}
--- import System.Random
+--import System.Random
 import System.IO
 import Text.Read (readMaybe)
 import Data.Maybe (fromJust)
@@ -83,7 +83,6 @@ blackjack (Stand) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
     | otherwise = ContinueGame (State (pCards, cCards, deck, currPlayer) pCanHit False)
 
 
-
 {-----------HELPER FUNCTIONS-----------}
 
 -- returns card drawn and new deck of cards (nth card is drawn from deck)
@@ -102,10 +101,60 @@ checkSum (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
     | sumCards cCards > 21 = EndOfGame True newGame
     | otherwise = ContinueGame (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
 
+-- averages the cards in a deck 
+avrg :: [Card] -> Int
+avrg deck = sumCards deck `div` length deck
 
+-- called in aiBetting
+-- decision making of the ai , takes in current state and average of the deck 
+-- will produce one of the following values 
+--     0  == stand and don't bet
+--     1 == stand and bet 
+--     2 == draw and don't bet 
+--     3 == draw and bet 
+aiDecide (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) avg =
+    do
+        let aiHand = sumCards cCards
+        let pHand = sumCards pCards
+        let missing = 21.0 - fromIntegral aiHand
+        let cMiss = 21.0 - fromIntegral pHand
+        if(missing < avg) 
+            then 
+            if(pHand < aiHand)
+                then
+                    return 1
+                    else 
+                    return 0
+                else
+                    if(pHand < aiHand)
+                        then
+                        return 3
+            else 
+                return 2
+
+-- requires checksum to be called before 
+-- decides how much ai will bet based on aiDecide and how much money is currently in hand
+-- returns the amount money ai will bet
+aiBet (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) avg money decision =
+    do
+        let aiHand = sumCards cCards
+        let missing = 21 - fromIntegral aiHand
+        let percent = fromIntegral aiHand `div` 21.0
+        if(decision == 0 || decision == 2)
+            then
+            return 0
+                else
+                if(decision == 1)
+                    then 
+                    if(percent > 0.66)
+                        then
+                        return percent * money
+                            else 
+                            return percent * money / 2
+                        else
+                            return percent * money / 3
 
 {-----------CONSTANTS/STARTING STATES-----------}
-
 -- whole 52 card deck
 --	's' == spades
 --	'd' == diamonds
