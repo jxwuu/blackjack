@@ -80,7 +80,7 @@ blackjack (Hit n) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
 -- action = stand (sets player's boolean flag (pCanHit/cCanHit) to False)
 blackjack (Stand) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
     | currPlayer = ContinueGame (State (pCards, cCards, deck, not currPlayer) False cCanHit)
-    | otherwise = ContinueGame (State (pCards, cCards, deck, currPlayer) pCanHit False)
+    | otherwise = ContinueGame (State (pCards, cCards, deck, not currPlayer) pCanHit False)
 
 
 {-----------HELPER FUNCTIONS-----------}
@@ -188,7 +188,7 @@ person_play game (ContinueGame state) (umoney, aimoney) value =
         putStrLn ("State - User's card: " ++ show pCards ++ ", AI's card: " ++ show cCards)
         putStrLn ("User Hit: " ++ show pCanHit ++ ", AI HIT: " ++ show cCanHit)
         putStrLn ("Money Left - User: " ++ show umoney ++ " AI: " ++ show aimoney)
-        putStrLn ("Current Value: " ++ show value)
+        putStrLn ("Pool: " ++ show value)
         putStrLn ("How much you want to bet?")
         line <- getLine
         if  (all isDigit line)
@@ -199,9 +199,9 @@ person_play game (ContinueGame state) (umoney, aimoney) value =
                     line <- getLine
                     if line == "1"
                       then 
-                      ai_play game (game (Hit 1) state) (umoney - x, aimoney - x) $x+value
+                      ai_play game (game (Hit 1) state) (umoney - x, aimoney) $x+value
                     else
-                      ai_play game (game (Stand) state) (umoney - x, aimoney - x) $x+value
+                      ai_play game (game (Stand) state) (umoney - x, aimoney) $x+value
         else
             person_play game (ContinueGame state) (umoney, aimoney) value
 
@@ -219,16 +219,20 @@ ai_play game (ContinueGame state) (umoney, aimoney) value =
       let aiDecision = aiDecide pCards cCards (avrg deck)
       let computerBet = aiBet cCards (avrg deck) aimoney aiDecision
       if aiDecision == 0 --stand and don't bet
-        then 
+        then
           person_play game (game Stand state) (umoney, aimoney) value
       else if aiDecision == 1 --stand and bet 
         then
-            person_play game (game Stand state) (umoney - computerBet, aimoney - computerBet) (value + computerBet)
+            do
+              putStrLn ("AI bet: " ++ show computerBet)
+              person_play game (game Stand state) (umoney, aimoney - computerBet) (value + computerBet)
       else if aiDecision == 2  -- draw and don't bet 
         then
             person_play game (game (Hit 1) state) (umoney, aimoney) value
       else --draw and bet
-         person_play game (game (Hit 1) state) (umoney - computerBet, aimoney - computerBet) (value + computerBet)
+         do
+              putStrLn ("AI bet: " ++ show computerBet)
+              person_play game (game (Hit 1) state) (umoney, aimoney - computerBet) (value + computerBet)
  
 ai_play game (EndOfGame player state) (umoney, aimoney) value =
     do
@@ -238,10 +242,10 @@ ai_play game (EndOfGame player state) (umoney, aimoney) value =
 update_bet (umoney, aimoney) bool value
    | bool = do 
       putStrLn ("You Won")
-      return (umoney + value, aimoney - value)
+      return (umoney + value, aimoney)
    | otherwise = do
       putStrLn ("AI Won")
-      return (umoney - value, aimoney + value)
+      return (umoney, aimoney + value)
 
 {-----------Start the program-----------}
 --start blackjack newGame
