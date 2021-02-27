@@ -48,6 +48,7 @@ type Game = Action -> State -> Result
 -- result of a game is True if player won, False if computer won
 data Result = EndOfGame Bool State
             | ContinueGame State
+            | Tie State
          deriving (Eq, Show)
 
 {-
@@ -65,10 +66,10 @@ data Action = Hit Int
 
 blackjack :: Game
 -- if no available actions for either player, do nothing and continue the game
-blackjack act (State (pCards, cCards, deck, True) False True) =
-    ContinueGame (State (pCards, cCards, deck, False) False True)
-blackjack act (State (pCards, cCards, deck, False) True False) =
-    ContinueGame (State (pCards, cCards, deck, True) True False)
+blackjack act (State (pCards, cCards, deck, True) False cCanHit) =
+    ContinueGame (State (pCards, cCards, deck, False) False cCanHit)
+blackjack act (State (pCards, cCards, deck, False) pCanHit False) =
+    ContinueGame (State (pCards, cCards, deck, True) pCanHit False)
 
 -- action = hit (needs to use checkSum to check the sum of a player's card values after a card was drawn,
 --				 and drawFromDeck to draw a card from the deck)
@@ -98,9 +99,13 @@ sumCards ((_,val):tCard) = val + (sumCards tCard)
 -- checks whether a player has exceeded 21
 checkSum :: State -> Result
 checkSum (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
-    | sumCards pCards > 21 = EndOfGame False newGame
-    | sumCards cCards > 21 = EndOfGame True newGame
+    | pSum > 21 || (not pCanHit && not cCanHit && 21 - pSum > 21 - cSum) = EndOfGame False newGame
+    | cSum > 21 || (not pCanHit && not cCanHit && 21 - pSum < 21 - cSum) = EndOfGame True newGame
+    | (not pCanHit && not cCanHit && 21 - pSum == 21 - cSum) = Tie newGame
     | otherwise = ContinueGame (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
+      where
+        pSum = sumCards pCards
+        cSum = sumCards cCards
 
 -- averages the cards in a deck 
 avrg :: [Card] -> Int
@@ -190,22 +195,27 @@ person_play game (ContinueGame state) (umoney, aimoney) value =
         putStrLn ("User Hit: " ++ show pCanHit ++ ", AI HIT: " ++ show cCanHit)
         putStrLn ("Money Left - User: " ++ show umoney ++ " AI: " ++ show aimoney)
         putStrLn ("Pool: " ++ show value)
-        putStrLn ("How much you want to bet?")
-        line <- getLine
-        if  (all isDigit line)
-           then
-               let x = read line :: Int in
-               do
-                    putStrLn ("You bet: " ++ show line ++ ", Hit:1 or flow: else")
-                    line <- getLine
-                    if line == "1"
-                      then 
-                      --ai_play game (game (Hit 1) state) (umoney - x, aimoney) $x+value
-                      ai_play game (game (Hit 1) state) (umoney - x, aimoney) $x+value `debug` ( show $ state)
-                    else
-                      ai_play game (game (Stand) state) (umoney - x, aimoney) $x+value
+        if pCanHit == False
+            then
+                ai_play game (game (Stand) state) (umoney, aimoney) value
         else
-            person_play game (ContinueGame state) (umoney, aimoney) value
+            do
+                putStrLn ("How much you want to bet?")
+                line <- getLine
+                if  (all isDigit line)
+                    then
+                       let x = read line :: Int in
+                         do
+                            putStrLn ("You bet: " ++ show line ++ ", Hit:1 or flow: else")
+                            line <- getLine
+                            if line == "1"
+                              then 
+                                 --ai_play game (game (Hit 1) state) (umoney - x, aimoney) $x+value
+                                 ai_play game (game (Hit 1) state) (umoney - x, aimoney) $x+value `debug` ( show $ state)
+                            else
+                                 ai_play game (game (Stand) state) (umoney - x, aimoney) $x+value `debug` ( show $ state)
+                else
+                    person_play game (ContinueGame state) (umoney, aimoney) value
 
 person_play game (EndOfGame player state) (umoney, aimoney) value = 
     let (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) = state in
