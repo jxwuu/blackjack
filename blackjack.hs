@@ -11,7 +11,6 @@ Very simple implentation of Blackjack/Twenty-One:
 -}
 
 
-
 {-----------IMPORTS-----------}
 --import System.Random
 import System.IO
@@ -19,9 +18,11 @@ import Text.Read (readMaybe)
 import Data.Maybe (fromJust)
 import Data.Char (isDigit)
 import Text.Read
+import Debug.Trace
 
 {-----------DATA TYPES-----------}
 
+debug = flip trace
 -- ***the following data types are adapted from Dr. David Poole's "MagicSum.hs" example:
 
 -- state consists of internal state and whether a player can Hit again or not
@@ -64,10 +65,10 @@ data Action = Hit Int
 
 blackjack :: Game
 -- if no available actions for either player, do nothing and continue the game
-blackjack act (State (pCards, cCards, deck, currPlayer) False True) =
-    ContinueGame (State (pCards, cCards, deck, not currPlayer) False True)
-blackjack act (State (pCards, cCards, deck, currPlayer) True False) =
-    ContinueGame (State (pCards, cCards, deck, not currPlayer) True False)
+blackjack act (State (pCards, cCards, deck, True) False True) =
+    ContinueGame (State (pCards, cCards, deck, False) False True)
+blackjack act (State (pCards, cCards, deck, False) True False) =
+    ContinueGame (State (pCards, cCards, deck, True) True False)
 
 -- action = hit (needs to use checkSum to check the sum of a player's card values after a card was drawn,
 --				 and drawFromDeck to draw a card from the deck)
@@ -199,7 +200,8 @@ person_play game (ContinueGame state) (umoney, aimoney) value =
                     line <- getLine
                     if line == "1"
                       then 
-                      ai_play game (game (Hit 1) state) (umoney - x, aimoney) $x+value
+                      --ai_play game (game (Hit 1) state) (umoney - x, aimoney) $x+value
+                      ai_play game (game (Hit 1) state) (umoney - x, aimoney) $x+value `debug` ( show $ state)
                     else
                       ai_play game (game (Stand) state) (umoney - x, aimoney) $x+value
         else
