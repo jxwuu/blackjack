@@ -169,8 +169,8 @@ newGame = State ([], [], fullDeck, True) True True
 
 {-----------USER INTERFACE-----------}
 type Bet = (Int, Int) --User's money, AI's money
-start :: Game -> IO Bet
-start game = 
+start :: Game -> State -> IO Bet
+start game state = 
     do
         putStrLn ("Game start! Welcome To BlackJack. Please enter the amount of money that you want to spend.")
         line <- getLine
@@ -178,32 +178,80 @@ start game =
             then
                 --let x = 123
                 --return (read line :: Int, read line :: Int)
-                play game newGame (read line :: Int, read line :: Int)
+                play game state (read line :: Int, read line :: Int)
             else
               do
                 putStrLn ("Not an Integer, return (0,0) ")
                 --line <- getLine
                 return (0, 0)
 play :: Game -> State -> Bet -> IO Bet
-play game newGame (umoney, aimoney) = 
+play game state (umoney, aimoney) = 
     do
-      putStrLn ("Who Starts? 0 = You, 1 = AI, 2 = quit.")
+      putStrLn ("New game - Who Starts? Quit = 1, You = 2, AI = 3")
       line <- getLine
-      if line == "2"
+      if line == "1"
          then
-             return (umoney, aimoney)
-      else if line == "1"
+             do
+                putStrLn ("Done! Money Left - User: " ++ show umoney ++ " AI: " ++ show aimoney)
+                return (umoney, aimoney)
+      else if line == "2"
          then 
-             return (0,0)
+            person_play game (game (HIT 2) state) (umoney, aimoney) 0
       else
-             return (12,12)
+            return (12,12)
+
+-- User decision
+--     0  == stand and don't bet
+--     1 == stand and bet 
+--     2 == draw and don't bet 
+--     3 == draw and bet 
+--person_play :: Game -> Result -> Bet -> IO Bet
+person_play game (ContinueGame state) (umoney, aimoney) value = 
+    let (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) = state in
+    do
+        putStrLn ("State - User's card: " ++ show pCards ++ ", AI's card: " ++ show cCards)
+        putStrLn ("User Hit: " ++ show pCanHit ++ ", AI HIT: " ++ show cCanHit)
+        putStrLn ("Money Left - User: " ++ show umoney ++ " AI: " ++ show aimoney)
+        putStrLn ("How much you want to bet?")
+        line <- getLine
+        if  (all isDigit line)
+           then
+               do
+                    putStrLn ("You bet: " ++ show line ++ ", Hit:1 or flow: else")
+                    line <- getLine
+                    if line == "1"
+                      then 
+                      AI_play game (game (Hit 1) state) (umoney, aimoney) 0+value
+                    else
+                      AI_play game (game (Stand) state) (umoney, aimoney) value
+        else
+            person_play game (ContinueGame state) (umoney, aimoney) value
+
+person_play game (EndOfGame player state) (umoney, aimoney) value = 
+    let (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) = state in
+    do
+       result <- update_bet (umoney, aimoney) False value
+       play game state result
 
 
-
-
+AI_play game (EndOfGame player state) (umoney, aimoney) value =
+    do
+       result <- update_bet (umoney, aimoney) True value
+       play game state result
+	   
+AI_play:: Game -> Result -> Bet -> Num -> 
+AI_play game (ContinueGame state) (umoney, aimoney) value =
+    person_play game (game (Hit 1) state) result value
+	
+	
+update_bet (umoney, aimoney) bool value = 
+    if bool == True
+       then (umoney + value, aimoney - value)
+    else
+	   (umoney - value, aimoney + value)
 
 {-----------Start the program-----------}
---start blackjack
+--start blackjack newGame
 
 
 
