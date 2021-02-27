@@ -81,9 +81,12 @@ blackjack (Hit n) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
 
 -- action = stand (sets player's boolean flag (pCanHit/cCanHit) to False)
 blackjack (Stand) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
+    | pCanHit == cCanHit && cCanHit == False = checkSum (State (pCards, cCards, deck, currPlayer) False False)
+    | pCanHit == False || cCanHit == False = checkSum (State (pCards, cCards, deck, currPlayer) False False)
     | currPlayer = ContinueGame (State (pCards, cCards, deck, not currPlayer) False cCanHit)
     | otherwise = ContinueGame (State (pCards, cCards, deck, not currPlayer) pCanHit False)
 
+ 
 
 {-----------HELPER FUNCTIONS-----------}
 
@@ -197,7 +200,7 @@ person_play game (ContinueGame state) (umoney, aimoney) value =
         putStrLn ("Pool: " ++ show value)
         if pCanHit == False
             then
-                ai_play game (game (Stand) state) (umoney, aimoney) value `debug` "123"
+                ai_play game (game (Stand) state) (umoney, aimoney) value
         else
             do
                 putStrLn ("How much you want to bet?")
@@ -211,9 +214,9 @@ person_play game (ContinueGame state) (umoney, aimoney) value =
                             if line == "1"
                               then 
                                  --ai_play game (game (Hit 1) state) (umoney - x, aimoney) $x+value
-                                 ai_play game (game (Hit 1) state) (umoney - x, aimoney) $x+value `debug` ( show $ state)
+                                 ai_play game (game (Hit 1) state) (umoney - x, aimoney) $x+value --`debug` ( show $ state)
                             else
-                                 ai_play game (game (Stand) state) (umoney - x, aimoney) $x+value `debug` ( show $ state)
+                                 ai_play game (game (Stand) state) (umoney - x, aimoney) $x+value --`debug` ( show $ state)
                 else
                     person_play game (ContinueGame state) (umoney, aimoney) value
 
@@ -223,24 +226,33 @@ person_play game (EndOfGame player state) (umoney, aimoney) value =
        result <- update_bet (umoney, aimoney) False value
        play game state result
 
+person_play game (Tie state) (umoney, aimoney) value = 
+    do
+       putStrLn ("Tie!")
+       play game newGame (umoney, aimoney)
   
 ai_play:: Game -> Result -> Bet -> Int -> IO Bet
 ai_play game (ContinueGame state) (umoney, aimoney) value =
     let (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) = state in
     do
+      putStrLn ("ai_play game (ContinueGame state) ")
       let aiDecision = aiDecide pCards cCards (avrg deck)
       let computerBet = aiBet cCards (avrg deck) aimoney aiDecision
       if aiDecision == 0 --stand and don't bet
         then
-          person_play game (game Stand state) (umoney, aimoney) value
+            do
+              putStrLn ("AI stand but don't bet");
+              person_play game (game Stand state) (umoney, aimoney) value
       else if aiDecision == 1 --stand and bet 
         then
             do
               putStrLn ("AI bet: " ++ show computerBet)
-              person_play game (game Stand state) (umoney, aimoney - computerBet) (value + computerBet)
+              person_play game (game Stand state) (umoney, aimoney - computerBet) (value + computerBet) `debug` ( show $ state)
       else if aiDecision == 2  -- draw and don't bet 
         then
-            person_play game (game (Hit 1) state) (umoney, aimoney) value
+            do
+              putStrLn ("AI draw but don't bet");
+              person_play game (game (Hit 1) (State (pCards, cCards, deck, False) pCanHit cCanHit)) (umoney, aimoney) value 
       else --draw and bet
          do
               putStrLn ("AI bet: " ++ show computerBet)
@@ -251,6 +263,11 @@ ai_play game (EndOfGame player state) (umoney, aimoney) value =
        result <- update_bet (umoney, aimoney) True value
        play game state result
 
+ai_play game (Tie state) (umoney, aimoney) value =
+    do
+       putStrLn ("Tie!")
+       play game newGame (umoney, aimoney)
+ 
 update_bet (umoney, aimoney) bool value
    | bool = do 
       putStrLn ("You Won")
