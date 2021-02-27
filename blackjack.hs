@@ -112,47 +112,23 @@ avrg deck = sumCards deck `div` length deck
 --     1 == stand and bet 
 --     2 == draw and don't bet 
 --     3 == draw and bet 
-aiDecide (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) avg =
-    do
-        let aiHand = sumCards cCards
-        let pHand = sumCards pCards
-        let missing = 21.0 - fromIntegral aiHand
-        let cMiss = 21.0 - fromIntegral pHand
-        if(missing < avg) 
-            then 
-            if(pHand < aiHand)
-                then
-                    return 1
-                    else 
-                    return 0
-                else
-                    if(pHand < aiHand)
-                        then
-                        return 3
-            else 
-                return 2
+aiDecide :: (Ord a, Num a, Num p) => [Card] -> [Card] -> a -> p
+aiDecide pHand cHand avg
+    | (21 - fromIntegral (sumCards cHand)) < avg && (sumCards pHand) < (sumCards cHand) = 1
+    | (21 - fromIntegral (sumCards cHand)) < avg && (sumCards pHand) > (sumCards cHand) = 0
+    | (21 - fromIntegral (sumCards cHand)) > avg && (sumCards pHand) < (sumCards cHand) = 3
+    | otherwise = 2
 
 -- requires checksum to be called before 
 -- decides how much ai will bet based on aiDecide and how much money is currently in hand
 -- returns the amount money ai will bet
-aiBet (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) avg money decision =
-    do
-        let aiHand = sumCards cCards
-        let missing = 21 - fromIntegral aiHand
-        let percent = fromIntegral aiHand `div` 21.0
-        if(decision == 0 || decision == 2)
-            then
-            return 0
-                else
-                if(decision == 1)
-                    then 
-                    if(percent > 0.66)
-                        then
-                        return percent * money
-                            else 
-                            return percent * money / 2
-                        else
-                            return percent * money / 3
+aiBet cHand avg money decision 
+    | decision == 0 = 0 
+    | decision == 2 = 0
+    | decision == 1 &&  fromIntegral (sumCards cHand) `div` 21 * 100 > 66 =  fromIntegral (sumCards cHand) * money / 100
+    | decision == 1 &&  fromIntegral (sumCards cHand) `div` 21 * 100 <= 66 =  fromIntegral (sumCards cHand) * money / 200
+    | otherwise =  fromIntegral (sumCards cHand) * money / 300
+
 
 {-----------CONSTANTS/STARTING STATES-----------}
 -- whole 52 card deck
