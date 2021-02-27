@@ -125,9 +125,9 @@ aiDecide pHand cHand avg
 aiBet cHand avg money decision 
     | decision == 0 = 0 
     | decision == 2 = 0
-    | decision == 1 &&  fromIntegral (sumCards cHand) `div` 21 * 100 > 66 =  fromIntegral (sumCards cHand) * money / 100
-    | decision == 1 &&  fromIntegral (sumCards cHand) `div` 21 * 100 <= 66 =  fromIntegral (sumCards cHand) * money / 200
-    | otherwise =  fromIntegral (sumCards cHand) * money / 300
+    | decision == 1 &&  (sumCards cHand) `div` 21 * 100 > 66 = (sumCards cHand) * money `div` 100
+    | decision == 1 &&   (sumCards cHand) `div` 21 * 100 <= 66 =  (sumCards cHand) * money `div` 200
+    | otherwise = (sumCards cHand) * money `div` 300
 
 
 {-----------CONSTANTS/STARTING STATES-----------}
@@ -215,17 +215,17 @@ ai_play:: Game -> Result -> Bet -> Int -> IO Bet
 ai_play game (ContinueGame state) (umoney, aimoney) value =
     let (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) = state in
     do
-      aiDecision <- aiDecide pCards cCards (avrg deck)
-      computerBet <- aiBet cCards (avrg deck) aimoney aiDecision
+      let aiDecision = aiDecide pCards cCards (avrg deck)
+      let computerBet = aiBet cCards (avrg deck) aimoney aiDecision
       if aiDecision == 0 --stand and don't bet
         then 
           person_play game (game Stand state) (umoney, aimoney) 0
       else if aiDecision == 1 --stand and bet 
-        then 
+        then
             person_play game (game Stand state) (umoney, aimoney) computerBet
       else if aiDecision == 2  -- draw and don't bet 
         then
-            person_play game (game Stand state) (umoney, aimoney) 0
+            person_play game (game (Hit 1) state) (umoney, aimoney) 0
       else --draw and bet
          person_play game (game (Hit 1) state) (umoney, aimoney) computerBet
  
