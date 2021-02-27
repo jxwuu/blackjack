@@ -160,7 +160,7 @@ start game state =
                 putStrLn ("Not an Integer, return (0,0) ")
                 --line <- getLine
                 return (0, 0)
-play :: Game -> State -> Bet -> IO Bet
+--play :: Game -> State -> Bet -> IO Bet
 play game state (umoney, aimoney) = 
     do
       putStrLn ("New game - Who Starts? Quit = 1, You = 2, AI = 3")
@@ -172,7 +172,7 @@ play game state (umoney, aimoney) =
                 return (umoney, aimoney)
       else if line == "2"
          then 
-            person_play game (game (HIT 2) state) (umoney, aimoney) 0
+            person_play game (game (Hit 2) state) (umoney, aimoney) 0
       else
             return (12,12)
 
@@ -192,21 +192,22 @@ person_play game (ContinueGame state) (umoney, aimoney) value =
         line <- getLine
         if  (all isDigit line)
            then
+               let x = read line :: Int in
                do
                     putStrLn ("You bet: " ++ show line ++ ", Hit:1 or flow: else")
                     line <- getLine
                     if line == "1"
                       then 
-                      AI_play game (game (Hit 1) state) (umoney, aimoney) 0+value
+                      ai_play game (game (Hit 1) state) (umoney, aimoney) x+value
                     else
-                      AI_play game (game (Stand) state) (umoney, aimoney) value
+                      ai_play game (game (Stand) state) (umoney, aimoney) x+value
         else
             person_play game (ContinueGame state) (umoney, aimoney) value
 
 person_play game (EndOfGame player state) (umoney, aimoney) value = 
     let (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) = state in
     do
-       result <- update_bet (umoney, aimoney) False value
+       result <- update_bet (umoney, aimoney) False value+0
        play game state result
 
 
@@ -215,16 +216,19 @@ ai_play game (EndOfGame player state) (umoney, aimoney) value =
        result <- update_bet (umoney, aimoney) True value
        play game state result
 	   
--- AI_play:: Game -> Result -> Bet -> Num -> 
+-- AI_play:: Game -> Result -> Bet -> Num -> IO Bet
 ai_play game (ContinueGame state) (umoney, aimoney) value =
-    person_play game (game (Hit 1) state) result value
+    person_play game (game (Hit 1) state) (umoney, aimoney) value
 	
-	
-update_bet (umoney, aimoney) bool value = 
-    if bool == True
-       then (umoney + value, aimoney - value)
-    else
-	   (umoney - value, aimoney + value)
+
+
+update_bet (umoney, aimoney) bool value
+   | bool = do 
+      putStrLn ("You Won")
+      return (umoney + value, aimoney - value)
+   | otherwise = do
+      putStrLn ("AI Won")
+      return (umoney - value, aimoney + value)
 
 {-----------Start the program-----------}
 --start blackjack newGame
