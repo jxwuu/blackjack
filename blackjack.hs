@@ -247,7 +247,7 @@ ai_play game (ContinueGame state) (umoney, aimoney) value =
         then
             do
               putStrLn ("AI bet: " ++ show computerBet)
-              person_play game (game Stand state) (umoney, aimoney - computerBet) (value + computerBet) `debug` ( show $ state)
+              person_play game (game Stand state) (umoney, aimoney - computerBet) (value + computerBet) 
       else if aiDecision == 2  -- draw and don't bet 
         then
             do
