@@ -160,7 +160,7 @@ start game state =
                 putStrLn ("Not an Integer, return (0,0) ")
                 --line <- getLine
                 return (0, 0)
---play :: Game -> State -> Bet -> IO Bet
+play :: Game -> State -> Bet -> IO Bet
 play game state (umoney, aimoney) = 
     do
       putStrLn ("New game - Who Starts? Quit = 1, You = 2, AI = 3")
@@ -172,16 +172,16 @@ play game state (umoney, aimoney) =
                 return (umoney, aimoney)
       else if line == "2"
          then 
-            person_play game (game (Hit 2) state) (umoney, aimoney) 0
+            person_play game (game (Hit 1) state) (umoney, aimoney) 0
       else
-            return (12,12)
+            ai_play game (game (Hit 1) state) (umoney, aimoney) 0
 
 -- User decision
 --     0  == stand and don't bet
 --     1 == stand and bet 
 --     2 == draw and don't bet 
 --     3 == draw and bet 
---person_play :: Game -> Result -> Bet -> IO Bet
+person_play :: Game -> Result -> Bet -> Int -> IO Bet
 person_play game (ContinueGame state) (umoney, aimoney) value = 
     let (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) = state in
     do
@@ -198,29 +198,41 @@ person_play game (ContinueGame state) (umoney, aimoney) value =
                     line <- getLine
                     if line == "1"
                       then 
-                      ai_play game (game (Hit 1) state) (umoney, aimoney) x+value
+                      ai_play game (game (Hit 1) state) (umoney, aimoney) $x+value
                     else
-                      ai_play game (game (Stand) state) (umoney, aimoney) x+value
+                      ai_play game (game (Stand) state) (umoney, aimoney) $x+value
         else
             person_play game (ContinueGame state) (umoney, aimoney) value
 
 person_play game (EndOfGame player state) (umoney, aimoney) value = 
     let (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) = state in
     do
-       result <- update_bet (umoney, aimoney) False value+0
+       result <- update_bet (umoney, aimoney) False value
        play game state result
 
-
+  
+ai_play:: Game -> Result -> Bet -> Int -> IO Bet
+ai_play game (ContinueGame state) (umoney, aimoney) value =
+    let (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) = state in
+    do
+      aiDecision <- aiDecide pCards cCards (avrg deck)
+      computerBet <- aiBet cCards (avrg deck) aimoney aiDecision
+      if aiDecision == 0 --stand and don't bet
+        then 
+          person_play game (game Stand state) (umoney, aimoney) 0
+      else if aiDecision == 1 --stand and bet 
+        then 
+            person_play game (game Stand state) (umoney, aimoney) computerBet
+      else if aiDecision == 2  -- draw and don't bet 
+        then
+            person_play game (game Stand state) (umoney, aimoney) 0
+      else --draw and bet
+         person_play game (game (Hit 1) state) (umoney, aimoney) computerBet
+ 
 ai_play game (EndOfGame player state) (umoney, aimoney) value =
     do
        result <- update_bet (umoney, aimoney) True value
        play game state result
-	   
--- AI_play:: Game -> Result -> Bet -> Num -> IO Bet
-ai_play game (ContinueGame state) (umoney, aimoney) value =
-    person_play game (game (Hit 1) state) (umoney, aimoney) value
-	
-
 
 update_bet (umoney, aimoney) bool value
    | bool = do 
