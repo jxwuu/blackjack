@@ -11,7 +11,6 @@ Very simple implentation of Blackjack/Twenty-One:
 -}
 
 
-
 {-----------IMPORTS-----------}
 --import System.Random
 import System.IO
@@ -19,9 +18,11 @@ import Text.Read (readMaybe)
 import Data.Maybe (fromJust)
 import Data.Char (isDigit)
 import Text.Read
+import Debug.Trace
 
 {-----------DATA TYPES-----------}
 
+debug = flip trace
 -- ***the following data types are adapted from Dr. David Poole's "MagicSum.hs" example:
 
 -- state consists of internal state and whether a player can Hit again or not
@@ -80,7 +81,7 @@ blackjack (Hit n) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
 -- action = stand (sets player's boolean flag (pCanHit/cCanHit) to False)
 blackjack (Stand) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
     | currPlayer = ContinueGame (State (pCards, cCards, deck, not currPlayer) False cCanHit)
-    | otherwise = ContinueGame (State (pCards, cCards, deck, currPlayer) pCanHit False)
+    | otherwise = ContinueGame (State (pCards, cCards, deck, not currPlayer) pCanHit False)
 
 
 {-----------HELPER FUNCTIONS-----------}
@@ -199,7 +200,7 @@ person_play game (ContinueGame state) (umoney, aimoney) value =
                     line <- getLine
                     if line == "1"
                       then 
-                      ai_play game (game (Hit 1) state) (umoney - x, aimoney - x) $x+value
+                      ai_play game (game (Hit 1) state) (umoney - x, aimoney - x) $x+value `debug` ( show $ state)
                     else
                       ai_play game (game (Stand) state) (umoney - x, aimoney - x) $x+value
         else
