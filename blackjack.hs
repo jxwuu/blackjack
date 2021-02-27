@@ -210,13 +210,13 @@ person_play game (EndOfGame player state) (umoney, aimoney) value =
        play game state result
 
 
-AI_play game (EndOfGame player state) (umoney, aimoney) value =
+ai_play game (EndOfGame player state) (umoney, aimoney) value =
     do
        result <- update_bet (umoney, aimoney) True value
        play game state result
 	   
-AI_play:: Game -> Result -> Bet -> Num -> 
-AI_play game (ContinueGame state) (umoney, aimoney) value =
+-- AI_play:: Game -> Result -> Bet -> Num -> 
+ai_play game (ContinueGame state) (umoney, aimoney) value =
     person_play game (game (Hit 1) state) result value
 	
 	
