@@ -74,7 +74,7 @@ blackjack act (State (pCards, cCards, deck, False) pCanHit False) =
 -- action = hit (needs to use checkSum to check the sum of a player's card values after a card was drawn,
 --				 and drawFromDeck to draw a card from the deck)
 blackjack (Hit n) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) 
-    | currPlayer = checkSum (State (newCard:pCards, cCards, newDeck, not currPlayer) pCanHit cCanHit)
+    | currPlayer = checkSum (State (newCard:pCards, cCards, newDeck, currPlayer) pCanHit cCanHit)
     | otherwise = checkSum (State (pCards, newCard:cCards, newDeck, not currPlayer) pCanHit cCanHit)
         where
              (newCard,newDeck) = drawFromDeck deck n
@@ -197,7 +197,7 @@ person_play game (ContinueGame state) (umoney, aimoney) value =
         putStrLn ("Pool: " ++ show value)
         if pCanHit == False
             then
-                ai_play game (game (Stand) state) (umoney, aimoney) value
+                ai_play game (game (Stand) state) (umoney, aimoney) value `debug` "123"
         else
             do
                 putStrLn ("How much you want to bet?")
