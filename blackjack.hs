@@ -176,7 +176,7 @@ play game state (umoney, aimoney) =
       putStrLn ("New game - Who Starts? Quit = 1, You = 2, AI = 3")
       line <- getLine
       num <- randomRIO (0, (length deck) - 1) :: IO Int
-      let (card, fullDeck) = drawFromDeck deck num
+      let (card, newDeck) = drawFromDeck deck num
       if line == "1" then
         do
           putStrLn ("Done! Money Left - User: " ++ show umoney ++ " AI: " ++ show aimoney)
