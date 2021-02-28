@@ -14,6 +14,7 @@ Very simple implentation of Blackjack/Twenty-One:
 {-----------IMPORTS-----------}
 import System.Random
 import System.IO
+import Control.Monad
 import Text.Read (readMaybe)
 import Data.Maybe (fromJust)
 import Data.Char (isDigit)
@@ -123,10 +124,10 @@ avrg deck = sumCards deck `div` length deck
 --     3 == draw and bet 
 aiDecide :: (Ord a, Num a, Num p) => [Card] -> [Card] -> a -> p
 aiDecide pHand cHand avg
-    | (21 - fromIntegral (sumCards cHand)) < avg && (sumCards pHand) < (sumCards cHand) = 1
-    | (21 - fromIntegral (sumCards cHand)) < avg && (sumCards pHand) > (sumCards cHand) = 0
-    | (21 - fromIntegral (sumCards cHand)) > avg && (sumCards pHand) < (sumCards cHand) = 3
-    | otherwise = 2
+    | (21 - fromIntegral (sumCards cHand)) < avg && ((sumCards pHand)-2) < (sumCards cHand)*4 `div` 3  = 1
+    | (21 - fromIntegral (sumCards cHand)) < avg && ((sumCards pHand)-2) > (sumCards cHand) = 0
+    | (21 - fromIntegral (sumCards cHand)) >= avg && (sumCards pHand) >= (sumCards cHand)*4 `div` 3 = 2
+    | otherwise = 3
 
 -- requires checksum to be called before 
 -- decides how much ai will bet based on aiDecide and how much money is currently in hand
@@ -207,12 +208,14 @@ person_play game (ContinueGame state) (umoney, aimoney) value =
         else
             do
                 putStrLn ("How much do you want to bet?")
+                moneyHandle umoney
+                putStrLn ("Please confirm your amount")
                 line <- getLine
                 if  (all isDigit line)
                     then
                        let x = read line :: Int in
                          do
-                            putStrLn ("You bet: " ++ show line ++ "\nHit = \"1\", Stand = any other key")
+                            putStrLn ("Hit = \"1\", Stand = any other key")
                             line <- getLine
                             if line == "1"
                               then 
@@ -233,24 +236,26 @@ person_play game (Tie state) (umoney, aimoney) value =
     do
        putStrLn ("Tie!")
        play game newGame (umoney, aimoney)
-  
+
 ai_play:: Game -> Result -> Bet -> Int -> IO Bet
 ai_play game (ContinueGame state) (umoney, aimoney) value =
     let (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) = state in
     do
-      putStrLn ("ai_play game (ContinueGame state) ")
+      putStrLn ("ai_play game (ContinueGame state) ") 
       let aiDecision = aiDecide pCards cCards (avrg deck)
-      let computerBet = aiBet cCards (avrg deck) aimoney aiDecision
+      let computerBet = aiBet cCards (avrg deck) aimoney aiDecision 
       num <- randomRIO (0, (length deck) - 1) :: IO Int
       if aiDecision == 0 --stand and don't bet
         then
             do
               putStrLn ("AI stand but don't bet");
+              putStrLn("--------------------------");
               person_play game (game Stand state) (umoney, aimoney) value
       else if aiDecision == 1 --stand and bet 
         then
             do
               putStrLn ("AI bet: " ++ show computerBet)
+              putStrLn("--------------------------");
               person_play game (game Stand state) (umoney, aimoney - computerBet) (value + computerBet) 
       else if aiDecision == 2  -- draw and don't bet 
         then
@@ -261,6 +266,7 @@ ai_play game (ContinueGame state) (umoney, aimoney) value =
       else --draw and bet
          do
               putStrLn ("AI bet: " ++ show computerBet)
+              putStrLn("--------------------------");
               person_play game (game (Hit num) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)) (umoney, aimoney - computerBet) (value + computerBet)
  
 ai_play game (EndOfGame player state) (umoney, aimoney) value =
@@ -280,6 +286,22 @@ update_bet (umoney, aimoney) bool value
    | otherwise = do
       putStrLn ("AI Won")
       return (umoney, aimoney + value)
+
+moneyHandle :: Int -> IO Int
+moneyHandle y = do
+  input1 <- getLine
+  case readMaybe input1 of
+    Nothing -> do
+      putStrLn "(integer input required, please try again)"
+      moneyHandle y
+    Just n -> do
+      if(n <= y)
+       then
+        return n
+      else 
+       do
+        putStrLn "You don't have enough, please enter a lower number"
+        moneyHandle y
 
 {-----------Start the program-----------}
 --start blackjack newGame
