@@ -176,15 +176,14 @@ play game state (umoney, aimoney) =
       putStrLn ("New game - Who Starts? Quit = 1, You = 2, AI = 3")
       line <- getLine
       num <- randomRIO (0, (length deck) - 1) :: IO Int
-      let (card, newDeck) = drawFromDeck deck num
       if line == "1" then
         do
           putStrLn ("Done! Money Left - User: " ++ show umoney ++ " AI: " ++ show aimoney)
           return (umoney, aimoney)
       else if line == "2" then 
-          person_play game (game (Hit num) (State (pCards, cCards, newDeck, currPlayer) pCanHit cCanHit)) (umoney, aimoney) 0
+          person_play game (game (Hit num) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)) (umoney, aimoney) 0
       else
-          ai_play game (game (Hit num) (State (pCards, cCards, newDeck, currPlayer) pCanHit cCanHit)) (umoney, aimoney) 0
+          ai_play game (game (Hit num) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)) (umoney, aimoney) 0
 
 -- User decision
 --     0  == stand and don't bet
@@ -202,7 +201,6 @@ person_play game (ContinueGame state) (umoney, aimoney) value =
         putStrLn ("Computer's money:  " ++ show aimoney)
         putStrLn ("Current pool: " ++ show value)
         num <- randomRIO (0, (length deck) - 1) :: IO Int
-        let (card, newDeck) = drawFromDeck deck num
         if pCanHit == False
             then
                 ai_play game (game (Stand) state) (umoney, aimoney) value
@@ -219,7 +217,7 @@ person_play game (ContinueGame state) (umoney, aimoney) value =
                             if line == "1"
                               then 
                                  --ai_play game (game (Hit 1) state) (umoney - x, aimoney) $x+value
-                                 ai_play game (game (Hit num) (State (pCards, cCards, newDeck, currPlayer) pCanHit cCanHit)) (umoney - x, aimoney) $x+value --`debug` ( show $ state)
+                                 ai_play game (game (Hit num) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)) (umoney - x, aimoney) $x+value --`debug` ( show $ state)
                             else
                                  ai_play game (game (Stand) state) (umoney - x, aimoney) $x+value --`debug` ( show $ state)
                 else
@@ -244,7 +242,6 @@ ai_play game (ContinueGame state) (umoney, aimoney) value =
       let aiDecision = aiDecide pCards cCards (avrg deck)
       let computerBet = aiBet cCards (avrg deck) aimoney aiDecision
       num <- randomRIO (0, (length deck) - 1) :: IO Int
-      let (card, newDeck) = drawFromDeck deck num
       if aiDecision == 0 --stand and don't bet
         then
             do
@@ -260,11 +257,11 @@ ai_play game (ContinueGame state) (umoney, aimoney) value =
             do
               putStrLn ("AI draw but don't bet");
               putStrLn("--------------------------");
-              person_play game (game (Hit num) (State (pCards, cCards, newDeck, False) pCanHit cCanHit)) (umoney, aimoney) value 
+              person_play game (game (Hit num) (State (pCards, cCards, deck, False) pCanHit cCanHit)) (umoney, aimoney) value 
       else --draw and bet
          do
               putStrLn ("AI bet: " ++ show computerBet)
-              person_play game (game (Hit num) (State (pCards, cCards, newDeck, currPlayer) pCanHit cCanHit)) (umoney, aimoney - computerBet) (value + computerBet)
+              person_play game (game (Hit num) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)) (umoney, aimoney - computerBet) (value + computerBet)
  
 ai_play game (EndOfGame player state) (umoney, aimoney) value =
     do
