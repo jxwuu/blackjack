@@ -208,12 +208,10 @@ person_play game (ContinueGame state) (umoney, aimoney) value =
         else
             do
                 putStrLn ("How much do you want to bet?")
-                moneyHandle umoney
-                putStrLn ("Please confirm your amount")
-                line <- getLine
-                if  (all isDigit line)
+                line <- moneyHandle umoney
+                if  (1 == 1)
                     then
-                       let x = read line :: Int in
+                       let x = line :: Int in
                          do
                             putStrLn ("Hit = \"1\", Stand = any other key")
                             line <- getLine
