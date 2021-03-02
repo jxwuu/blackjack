@@ -103,9 +103,9 @@ sumCards ((_,val):tCard) = val + (sumCards tCard)
 -- checks whether a player has exceeded 21
 checkSum :: State -> Result
 checkSum (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
-    | pSum > 21 || (not pCanHit && not cCanHit && 21 - pSum > 21 - cSum) = EndOfGame False (State (pCards, cCards, deck, currPlayer) False False)
-    | cSum > 21 || (not pCanHit && not cCanHit && 21 - pSum < 21 - cSum) = EndOfGame True (State (pCards, cCards, deck, currPlayer) False False)
-    | (not pCanHit && not cCanHit && 21 - pSum == 21 - cSum) = Tie (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
+    | pSum > 21 || (not pCanHit && not cCanHit && (21 - pSum) > (21 - cSum)) = EndOfGame False (State (pCards, cCards, deck, currPlayer) False False)
+    | cSum > 21 || (not pCanHit && not cCanHit && (21 - pSum) < (21 - cSum)) = EndOfGame True (State (pCards, cCards, deck, currPlayer) False False)
+    | (not pCanHit && not cCanHit && (21 - pSum) == (21 - cSum)) = Tie (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
     | otherwise = ContinueGame (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
       where
         pSum = sumCards pCards
@@ -227,7 +227,7 @@ person_play game (ContinueGame state) (umoney, aimoney) value =
 person_play game (EndOfGame player state) (umoney, aimoney) value = 
     let (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) = state in
     do
-       result <- update_bet (umoney, aimoney) False value
+       result <- update_bet state (umoney, aimoney) False value
        endOutput (state)
        play game newGame result
 
@@ -271,7 +271,7 @@ ai_play game (ContinueGame state) (umoney, aimoney) value =
  
 ai_play game (EndOfGame player state) (umoney, aimoney) value =
     do
-       result <- update_bet (umoney, aimoney) True value
+       result <- update_bet state (umoney, aimoney) True value
        endOutput (state)
        play game newGame result
 
@@ -281,13 +281,25 @@ ai_play game (Tie state) (umoney, aimoney) value =
        endOutput (state)
        play game newGame (umoney, aimoney)
  
-update_bet (umoney, aimoney) bool value
-   | bool = do 
+update_bet (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)  (umoney, aimoney) bool value
+   | (sumCards pCards) < 21 && (sumCards cCards) < (sumCards pCards) = do 
       putStrLn ("You Won")
       return (umoney + value, aimoney)
-   | otherwise = do
+   | (sumCards cCards) < 21 && (sumCards cCards) > (sumCards pCards)  = do
       putStrLn ("AI Won")
       return (umoney, aimoney + value)
+   | (sumCards pCards) > 21 && (sumCards cCards) > 21 = do
+      putStrLn ("Both lose !")
+      return (umoney, aimoney + value)
+   | (sumCards pCards) == 21 = do
+      putStrLn("You win!")
+      return (umoney, aimoney + value) 
+   | (sumCards cCards) == 21 = do
+      putStrLn("AI Won")
+      return (umoney, aimoney + value) 
+   | otherwise = do 
+      putStrLn("AI Won")
+      return (umoney, aimoney + value) 
 
 endOutput (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) = 
     do 
