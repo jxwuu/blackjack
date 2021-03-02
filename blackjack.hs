@@ -13,6 +13,7 @@ Very simple implentation of Blackjack/Twenty-One:
 
 {-----------IMPORTS-----------}
 import System.Random
+import System.Exit (exitSuccess)
 import System.IO
 import Control.Monad
 import Text.Read (readMaybe)
@@ -49,6 +50,7 @@ type Game = Action -> State -> Result
 -- result of a game is True if player won, False if computer won
 data Result = EndOfGame Bool State
             | ContinueGame State
+            | Debt State
             | Tie State
          deriving (Eq, Show)
 
@@ -209,7 +211,7 @@ person_play game (ContinueGame state) (umoney, aimoney) value =
             do
                 putStrLn ("How much do you want to bet?")
                 line <- moneyHandle umoney
-                if  (1 == 1)
+                if  (line /= -1)
                     then
                        let x = line :: Int in
                          do
@@ -222,7 +224,7 @@ person_play game (ContinueGame state) (umoney, aimoney) value =
                             else
                                  ai_play game (game (Stand) state) (umoney - x, aimoney) $x+value --`debug` ( show $ state)
                 else
-                    person_play game (ContinueGame state) (umoney, aimoney) value
+                    person_play game (Debt state) (umoney, aimoney) value
 
 person_play game (EndOfGame player state) (umoney, aimoney) value = 
     let (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) = state in
@@ -236,6 +238,12 @@ person_play game (Tie state) (umoney, aimoney) value =
        putStrLn ("Tie!")
        endOutput (state)
        play game newGame (umoney, aimoney)
+
+person_play game (Debt state) (umoney, aimoney) value = 
+    do
+       putStrLn ("Bye! Until we meet again!")
+       putStrLn ("-------------------------")
+       start blackjack newGame
 
 ai_play:: Game -> Result -> Bet -> Int -> IO Bet
 ai_play game (ContinueGame state) (umoney, aimoney) value =
@@ -308,19 +316,26 @@ endOutput (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) =
 
 moneyHandle :: Int -> IO Int
 moneyHandle y = do
-  input1 <- getLine
-  case readMaybe input1 of
-    Nothing -> do
-      putStrLn "(integer input required, please try again)"
-      moneyHandle y
-    Just n -> do
-      if(n <= y && n > 0)
-       then
-        return n
-      else 
-       do
-        putStrLn "Please enter a valid amount"
+ if(y <= 0)
+  then
+   do
+    putStrLn "Sorry! But you're out of money!"
+    return (-1)
+  else 
+   do 
+    input1 <- getLine
+    case readMaybe input1 of
+      Nothing -> do
+        putStrLn "(integer input required, please try again)"
         moneyHandle y
+      Just n -> do
+        if(n <= y && n >= 0)
+         then
+          return n
+        else 
+         do
+          putStrLn "Please enter a valid amount"
+          moneyHandle y
 
 validInput :: IO Int
 validInput = do
