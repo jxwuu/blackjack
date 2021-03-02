@@ -103,9 +103,9 @@ sumCards ((_,val):tCard) = val + (sumCards tCard)
 -- checks whether a player has exceeded 21
 checkSum :: State -> Result
 checkSum (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
-    | pSum > 21 || (not pCanHit && not cCanHit && 21 - pSum > 21 - cSum) = EndOfGame False newGame
-    | cSum > 21 || (not pCanHit && not cCanHit && 21 - pSum < 21 - cSum) = EndOfGame True newGame
-    | (not pCanHit && not cCanHit && 21 - pSum == 21 - cSum) = Tie newGame
+    | pSum > 21 || (not pCanHit && not cCanHit && 21 - pSum > 21 - cSum) = EndOfGame False (State (pCards, cCards, deck, currPlayer) False False)
+    | cSum > 21 || (not pCanHit && not cCanHit && 21 - pSum < 21 - cSum) = EndOfGame True (State (pCards, cCards, deck, currPlayer) False False)
+    | (not pCanHit && not cCanHit && 21 - pSum == 21 - cSum) = Tie (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
     | otherwise = ContinueGame (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
       where
         pSum = sumCards pCards
@@ -175,13 +175,13 @@ play game state (umoney, aimoney) =
   let (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) = state in
     do
       putStrLn ("New game - Who Starts? Quit = 1, You = 2, AI = 3")
-      line <- getLine
+      line <- validInput
       num <- randomRIO (0, (length deck) - 1) :: IO Int
-      if line == "1" then
+      if line == 1 then
         do
           putStrLn ("Done! Money Left - User: " ++ show umoney ++ " AI: " ++ show aimoney)
           return (umoney, aimoney)
-      else if line == "2" then 
+      else if line == 2 then 
           person_play game (game (Hit num) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)) (umoney, aimoney) 0
       else
           ai_play game (game (Hit num) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)) (umoney, aimoney) 0
@@ -228,11 +228,13 @@ person_play game (EndOfGame player state) (umoney, aimoney) value =
     let (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) = state in
     do
        result <- update_bet (umoney, aimoney) False value
-       play game state result
+       endOutput (state)
+       play game newGame result
 
 person_play game (Tie state) (umoney, aimoney) value = 
     do
        putStrLn ("Tie!")
+       endOutput (state)
        play game newGame (umoney, aimoney)
 
 ai_play:: Game -> Result -> Bet -> Int -> IO Bet
@@ -270,11 +272,13 @@ ai_play game (ContinueGame state) (umoney, aimoney) value =
 ai_play game (EndOfGame player state) (umoney, aimoney) value =
     do
        result <- update_bet (umoney, aimoney) True value
-       play game state result
+       endOutput (state)
+       play game newGame result
 
 ai_play game (Tie state) (umoney, aimoney) value =
     do
        putStrLn ("Tie!")
+       endOutput (state)
        play game newGame (umoney, aimoney)
  
 update_bet (umoney, aimoney) bool value
@@ -285,6 +289,11 @@ update_bet (umoney, aimoney) bool value
       putStrLn ("AI Won")
       return (umoney, aimoney + value)
 
+endOutput (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) = 
+    do 
+       putStrLn ("Your hand:        " ++ show pCards)
+       putStrLn ("Computer's hand:  " ++ show cCards)
+
 moneyHandle :: Int -> IO Int
 moneyHandle y = do
   input1 <- getLine
@@ -293,13 +302,30 @@ moneyHandle y = do
       putStrLn "(integer input required, please try again)"
       moneyHandle y
     Just n -> do
-      if(n <= y)
+      if(n <= y && n > 0)
        then
         return n
       else 
        do
-        putStrLn "You don't have enough, please enter a lower number"
+        putStrLn "Please enter a valid amount"
         moneyHandle y
+
+validInput :: IO Int
+validInput = do
+  input1 <- getLine
+  case readMaybe input1 of
+    Nothing -> do
+      putStrLn "(integer input required, please try again)"
+      validInput
+    Just n -> do
+      if(n == 1 || n == 2 || n == 3)
+       then
+        return n
+      else 
+       do
+        putStrLn "Please enter a valid option"
+        validInput 
+        
 
 {-----------Start the program-----------}
 --start blackjack newGame
