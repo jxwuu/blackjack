@@ -296,50 +296,101 @@ update_bet (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)  (umoney, 
    | (sumCards pCards) < 21 && (sumCards cCards) < (sumCards pCards) = do 
       putStrLn("--------------------------");
       putStrLn ("You Won")
-      return (umoney + value, aimoney)
+      x <- noMoney (umoney + value, aimoney);
+      if(x > 1)
+       then 
+         start blackjack newGame
+      else 
+       return (umoney + value, aimoney)
    | (sumCards cCards) < 21 && (sumCards cCards) > (sumCards pCards)  = do
       putStrLn("--------------------------");
       putStrLn ("AI Won")
-      return (umoney, aimoney + value)
+      x <- noMoney (umoney, aimoney + value);
+      if(x > 1)
+       then 
+         start blackjack newGame
+      else 
+       return (umoney, aimoney + value)
    | (sumCards pCards) > 21 && (sumCards cCards) > 21 = do
       putStrLn("--------------------------");
       putStrLn ("Both lose !")
-      return (umoney, aimoney)
+      x <- noMoney (umoney, aimoney);
+      if(x > 1)
+       then 
+         start blackjack newGame
+      else 
+       return (umoney, aimoney)
    | (sumCards pCards) == 21 = do
       putStrLn("--------------------------");
       putStrLn("You win!")
-      return (umoney + value, aimoney) 
+      x <- noMoney (umoney + value, aimoney);
+      if(x > 1)
+       then 
+         start blackjack newGame
+      else 
+       return (umoney + value, aimoney) 
    | (sumCards cCards) == 21 = do
       putStrLn("--------------------------");
       putStrLn("AI Won")
-      return (umoney, aimoney + value) 
+      x <- noMoney (umoney, aimoney + value);
+      if(x > 1)
+       then 
+         start blackjack newGame
+      else 
+       return (umoney, aimoney + value) 
    | (sumCards pCards) < 21 && (sumCards cCards) > 21 = do
       putStrLn("--------------------------");
       putStrLn("You Won")
-      return (umoney + value, aimoney) 
+      x <- noMoney (umoney + value, aimoney);
+      if(x > 1)
+       then 
+         start blackjack newGame
+      else 
+       return (umoney + value, aimoney) 
    | (sumCards cCards) < 21 && (sumCards pCards) > 21 = do
       putStrLn("--------------------------");
       putStrLn("AI Won")
-      return (umoney, aimoney + value) 
+      x <- noMoney (umoney, aimoney+ value);
+      if(x > 1)
+       then 
+         start blackjack newGame
+      else 
+       return (umoney, aimoney + value) 
    | otherwise = do 
       putStrLn("--------------------------");
       putStrLn("AI Won")
-      return (umoney, aimoney + value) 
+      x <- noMoney (umoney, aimoney + value);
+      if(x > 1)
+       then 
+         start blackjack newGame
+      else 
+       return (umoney, aimoney + value) 
 
 endOutput (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) = 
     do 
        putStrLn ("Your hand:        " ++ show pCards)
        putStrLn ("Computer's hand:  " ++ show cCards)
 
+noMoney :: (Int,Int) -> IO Int
+noMoney (umoney, aimoney) = do 
+ if(umoney <= 0 || aimoney <= 0)
+  then
+   if(umoney <= 0)
+    then 
+     do 
+      putStrLn "Oh no! You're out of money! I hope to see you again!"
+      return 99
+   else 
+    do 
+     putStrLn "You won! The ai is out of money"
+     return 99
+ else 
+  do 
+   putStrLn("--------------------------");
+   return (-1)
+
 moneyHandle :: Int -> IO Int
 moneyHandle y = do
- if(y <= 0)
-  then
-   do
-    putStrLn "Sorry! But you're out of money!"
-    return (-1)
-  else 
-   do 
     input1 <- getLine
     case readMaybe input1 of
       Nothing -> do
