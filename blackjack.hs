@@ -107,7 +107,7 @@ checkSum :: State -> Result
 checkSum (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
     | pSum > 21 || (not pCanHit && not cCanHit && (21 - pSum) > (21 - cSum)) = EndOfGame False (State (pCards, cCards, deck, currPlayer) False False)
     | cSum > 21 || (not pCanHit && not cCanHit && (21 - pSum) < (21 - cSum)) = EndOfGame True (State (pCards, cCards, deck, currPlayer) False False)
-    | (not pCanHit && not cCanHit && (21 - pSum) == (21 - cSum)) = Tie (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
+    | pSum == 21 && cSum == 21 || (not pCanHit && not cCanHit && pSum == cSum) = Tie (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
     | otherwise = ContinueGame (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)
       where
         pSum = sumCards pCards
@@ -178,15 +178,14 @@ play game state (umoney, aimoney) =
     do
       putStrLn ("New game - Who Starts? Quit = 1, You = 2, AI = 3")
       line <- validInput
-      num <- randomRIO (0, (length deck) - 1) :: IO Int
       if line == 1 then
         do
           putStrLn ("Done! Money Left - User: " ++ show umoney ++ " AI: " ++ show aimoney)
           return (umoney, aimoney)
       else if line == 2 then 
-          person_play game (game (Hit num) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)) (umoney, aimoney) 0
+          person_play game (ContinueGame (State (pCards, cCards, deck, True) pCanHit cCanHit)) (umoney, aimoney) 0
       else
-          ai_play game (game (Hit num) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)) (umoney, aimoney) 0
+          ai_play game (ContinueGame (State (pCards, cCards, deck, False) pCanHit cCanHit)) (umoney, aimoney) 0
 
 -- User decision
 --     0  == stand and don't bet
@@ -287,7 +286,7 @@ ai_play game (Tie state) (umoney, aimoney) value =
     do
        putStrLn ("Tie!")
        endOutput (state)
-       play game newGame (umoney, aimoney)
+       play game newGame (umoney + (value `div` 2), aimoney + (value `div` 2))
  
 update_bet (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)  (umoney, aimoney) bool value
    | (sumCards pCards) < 21 && (sumCards cCards) < (sumCards pCards) = do 
