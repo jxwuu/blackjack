@@ -77,7 +77,7 @@ blackjack act (State (pCards, cCards, deck, False) pCanHit False) =
 -- action = hit (needs to use checkSum to check the sum of a player's card values after a card was drawn,
 --				 and drawFromDeck to draw a card from the deck)
 blackjack (Hit n) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) 
-    | currPlayer = checkSum (State (newCard:pCards, cCards, newDeck, currPlayer) pCanHit cCanHit)
+    | currPlayer = checkSum (State (newCard:pCards, cCards, newDeck, not currPlayer) pCanHit cCanHit)
     | otherwise = checkSum (State (pCards, newCard:cCards, newDeck, not currPlayer) pCanHit cCanHit)
         where
              (newCard,newDeck) = drawFromDeck deck n
@@ -176,6 +176,7 @@ play :: Game -> State -> Bet -> IO Bet
 play game state (umoney, aimoney) =
   let (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) = state in
     do
+      putStrLn("--------------------------");
       putStrLn ("New game - Who Starts? Quit = 1, You = 2, AI = 3")
       line <- validInput
       num <- randomRIO (0, (length deck) - 1) :: IO Int
@@ -184,9 +185,9 @@ play game state (umoney, aimoney) =
           putStrLn ("Done! Money Left - User: " ++ show umoney ++ " AI: " ++ show aimoney)
           return (umoney, aimoney)
       else if line == 2 then 
-          person_play game (game (Hit num) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)) (umoney, aimoney) 0
+          person_play game (ContinueGame (State (pCards, cCards, deck, True) pCanHit cCanHit)) (umoney, aimoney) 0
       else
-          ai_play game (game (Hit num) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)) (umoney, aimoney) 0
+          ai_play game (ContinueGame (State (pCards, cCards, deck, False) pCanHit cCanHit)) (umoney, aimoney) 0
 
 -- User decision
 --     0  == stand and don't bet
@@ -270,12 +271,12 @@ ai_play game (ContinueGame state) (umoney, aimoney) value =
             do
               putStrLn ("AI draw but don't bet");
               putStrLn("--------------------------");
-              person_play game (game (Hit num) (State (pCards, cCards, deck, False) pCanHit cCanHit)) (umoney, aimoney) value 
+              person_play game (game (Hit num) state) (umoney, aimoney) value 
       else --draw and bet
          do
               putStrLn ("AI bet: " ++ show computerBet)
               putStrLn("--------------------------");
-              person_play game (game (Hit num) (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit)) (umoney, aimoney - computerBet) (value + computerBet)
+              person_play game (game (Hit num) state) (umoney, aimoney - computerBet) (value + computerBet)
  
 ai_play game (EndOfGame player state) (umoney, aimoney) value =
     do
