@@ -376,12 +376,14 @@ update_bet (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) (umoney, a
       else 
        return (umoney, aimoney + value) 
 
+-- prints out hand at the end of a game
 endOutput :: State -> IO ()
 endOutput (State (pCards, cCards, deck, currPlayer) pCanHit cCanHit) = 
     do 
         putStrLn ("Your hand:         " ++ show pCards)
         putStrLn ("Computer's hand:   " ++ show cCards)
 
+-- checks if you or the ai is out of money 
 noMoney :: (Int,Int) -> IO Int
 noMoney (umoney, aimoney) = do 
  if(umoney <= 0 || aimoney <= 0)
@@ -400,6 +402,8 @@ noMoney (umoney, aimoney) = do
    putStrLn("--------------------------");
    return (-1)
 
+-- checks if you have entered a valid amount of money for betting 
+-- rejects non number, negative, and larger than money amount inputs 
 moneyHandle :: Int -> IO Int
 moneyHandle y = do
     input1 <- getLine
